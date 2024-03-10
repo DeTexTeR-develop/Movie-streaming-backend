@@ -19,6 +19,9 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 dbConnect();
 
+app.use("/healthcheck", (req, res) => {
+    res.status(200).send('ok');
+});
 app.use("/api/u", authRouter);
 
 app.use(errorHandler);
