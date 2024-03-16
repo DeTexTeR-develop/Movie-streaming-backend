@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const movieSchema = new Schema({
-    movieName: {
+    title: {
         type: String,
         unique: true,
         required: true
@@ -18,6 +18,7 @@ const movieSchema = new Schema({
     },
     moviePoster: {
         type: String,
+        required: true,
         unique: true
     },
     movieStreamUrl: String,
