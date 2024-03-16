@@ -8,6 +8,7 @@ const port = process.env.PORT || 3000;
 
 
 const authRouter = require('./routes/authRoutes');
+const movieRouter = require('./routes/movieRoutes');
 
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
@@ -23,6 +24,7 @@ app.use("/healthcheck", (req, res) => {
     res.status(200).send('ok');
 });
 app.use("/api/u", authRouter);
+app.use("/api/m", movieRouter);
 
 app.use(errorHandler);
 
