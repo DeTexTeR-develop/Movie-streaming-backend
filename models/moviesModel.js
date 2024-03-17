@@ -4,7 +4,6 @@ const { Schema } = mongoose;
 const movieSchema = new Schema({
     title: {
         type: String,
-        unique: true,
         required: true
     },
     description: {
@@ -36,7 +35,7 @@ const movieSchema = new Schema({
     }],
     Duration: Number,
     Language: String,
-    actors: [String]
+    actors: [String],
 });
 
 module.exports = mongoose.model('Movie', movieSchema);

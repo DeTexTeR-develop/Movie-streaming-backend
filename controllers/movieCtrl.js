@@ -2,6 +2,7 @@ const Movie = require('../models/moviesModel');
 const validateMongoId = require('../utils/validateMongoDbid');
 const expressAsyncHandler = require('express-async-handler');
 const slugify = require('slugify');
+const { uploadMovieUrl, getMovieUrl } = require('../utils/s3Movie');
 
 
 const createMovie = expressAsyncHandler(async (req, res) => {
@@ -10,7 +11,8 @@ const createMovie = expressAsyncHandler(async (req, res) => {
             req.body.slug = slugify(req.body.title);
         };
         const movie = await Movie.create(req.body);
-        res.json(movie);
+        const urlToUpload = await uploadMovieUrl(movie.id, req.body.fileType);
+        res.json({ movie, url: urlToUpload });
     } catch (err) {
         throw new Error(err);
     }
@@ -20,12 +22,17 @@ const getMovie = expressAsyncHandler(async (req, res) => {
     const { id } = req.params;
     validateMongoId(id);
     try {
+        const streamingUrl = await getMovieUrl(`/uploads/user-uploads/${id}`);
+        const linkMovie = await Movie.findByIdAndUpdate(id, { movieStreamUrl: streamingUrl }, { new: true });
         const movie = await Movie.findById(id);
         res.json(movie);
     } catch (err) {
         throw new Error(err);
     }
 });
+
+
+
 
 const getAllMovies = expressAsyncHandler(async (req, res) => {
     try {
