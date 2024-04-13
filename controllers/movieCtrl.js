@@ -21,11 +21,9 @@ const createMovie = expressAsyncHandler(async (req, res) => {
     }
 });
 const uploadMovie = expressAsyncHandler(async (req, res) => {
-    let responseSent = false;
     let client = null;
     try {
         if (!req.file) {
-            responseSent = true;
             return res.status(400).send('No file uploaded.');
         }
 
@@ -44,20 +42,15 @@ const uploadMovie = expressAsyncHandler(async (req, res) => {
 
         const uploadStream = bucket.openUploadStream(filename, { contentType });
 
+        console.log(uploadStream);
         uploadStream.on('error', (error) => {
-            if (!responseSent) {
-                responseSent = true;
-                console.error('Error uploading video:', error);
-                res.status(500).send('Internal server error');
-            }
+            console.error('Error uploading video:', error);
+            res.status(500).send('Internal server error');
         });
 
         uploadStream.on('finish', () => {
-            if (!responseSent) {
-                responseSent = true;
-                console.log('Video uploaded successfully!');
-                res.status(201).send('Video uploaded');
-            }
+            console.log('Video uploaded successfully!');
+            res.status(201).send('Video uploaded');
         });
 
         req.file.stream.pipe(uploadStream);

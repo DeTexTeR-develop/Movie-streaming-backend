@@ -55,3 +55,69 @@ app.get("/mongo-video", function (req, res) {
 app.listen(8000, function () {
     console.log("Listening on port 8000!");
 });
+
+
+
+
+
+
+
+
+
+const multer = require('multer');
+const path = require('path');
+
+// Define storage for uploaded files
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, './uploads'); // Specify the destination directory for uploaded files
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname)); // Rename the uploaded file if needed
+    }
+});
+
+// Initialize multer with disk storage
+const upload = multer({ storage: storage }).single('video');
+
+app.post('/upload-video', function (req, res) {
+    upload(req, res, function (err) {
+        if (err instanceof multer.MulterError) {
+            // A Multer error occurred when uploading.
+            res.status(400).json({ error: "Multer error occurred." });
+        } else if (err) {
+            // An unknown error occurred when uploading.
+            res.status(500).json({ error: "An error occurred while uploading." });
+        } else {
+            // Everything went fine, get the file path and upload it to MongoDB
+            if (!req.file) {
+                res.status(400).json({ error: "No file uploaded." });
+                return;
+            }
+
+            mongodb.MongoClient.connect(url, function (error, client) {
+                if (error) {
+                    res.status(500).json({ error: "Failed to connect to MongoDB." });
+                    return;
+                }
+                const db = client.db('videos');
+                const bucket = new mongodb.GridFSBucket(db);
+                const videoUploadStream = bucket.openUploadStream('uploaded_video', {
+                    contentType: req.file.mimetype // Specify the content type of the file
+                });
+
+                // Pipe the file stream to MongoDB
+                const fileStream = fs.createReadStream(req.file.path);
+                fileStream.pipe(videoUploadStream);
+
+                videoUploadStream.on('error', function (error) {
+                    res.status(500).json({ error: "Failed to upload video to MongoDB." });
+                });
+
+                videoUploadStream.on('finish', function () {
+                    res.status(200).json({ message: "Video uploaded successfully." });
+                });
+            });
+        }
+    });
+});
