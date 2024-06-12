@@ -9,7 +9,15 @@ const uuid = require('uuid')
 const { hasSubscribers } = require('diagnostics_channel');
 const path = require('path');
 const { exec } = require('child_process');
+const AWS = require('aws-sdk');
 
+AWS.config.update({
+    accessKeyId: process.env.sS3_ACCESS_KEY,
+    secretAccessKey: process.env.S3_SECRET_KEY,
+    region: process.env.S3_REGION,
+});
+
+const s3 = new AWS.S3();
 
 const createMovie = expressAsyncHandler(async (req, res) => {
     try {
@@ -22,6 +30,7 @@ const createMovie = expressAsyncHandler(async (req, res) => {
         throw new Error(err);
     }
 });
+const chapters = [];
 const uploadMovie = expressAsyncHandler(async (req, res) => {
     const { id } = req.params;
     const chapterId = id; // Generate a unique chapter ID
@@ -53,9 +62,29 @@ const uploadMovie = expressAsyncHandler(async (req, res) => {
         }
         console.log(`stdout: ${stdout}`);
         console.error(`stderr: ${stderr}`);
-        const videoUrl = `public/videos/${chapterId}/${outputFileName}`;
-        const movie = await Movie.findByIdAndUpdate(id, { movieStreamUrl: videoUrl });
-        res.json({ success: true, message: 'Video uploaded and converted to HLS.', chapterId, movie });
+
+        try {
+            const files = fs.readdirSync(outputDir);
+            for (const file of files) {
+                const filePath = path.join(outputDir, file);
+                const fileContent = fs.readFileSync(filePath);
+
+                const params = {
+                    Bucket: process.env.S3_BUCKET_NAME,
+                    Key: `${chapterId}/${file}`, // File path in the S3 bucket
+                    Body: fileContent,
+                    ContentType: 'application/vnd.apple.mpegurl' // Content type for .m3u8 files
+                };
+                await s3.upload(params).promise();
+            }
+            const videoUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${chapterId}/${outputFileName}`;
+            // chapters[chapterId] = { videoUrl, title: req.body.title, description: req.body.description }; // Store chapter information
+            const movie = await Movie.findByIdAndUpdate(id, { movieStreamUrl: videoUrl });
+            res.json({ success: true, message: 'Video uploaded and converted to HLS.', chapters });
+        } catch (uploadError) {
+            console.error(`S3 upload error: ${uploadError}`);
+            res.status(500).json({ error: 'Failed to upload video to S3' });
+        }
     });
 });
 
