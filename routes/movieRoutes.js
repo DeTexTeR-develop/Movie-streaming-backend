@@ -8,7 +8,7 @@ const upload = multer({ storage: storage });
 
 
 router.post("/create-movie", authMiddleware, isAdmin, createMovie);
-router.post('/upload', upload.single('video'), uploadMovie);
+router.post('/upload/:id', upload.single('video'), uploadMovie);
 router.get("/:id", authMiddleware, getMovie);
 router.get("/", authMiddleware, getAllMovies);
 router.put("/:id", authMiddleware, isAdmin, updateMovies);

@@ -9,9 +9,7 @@ const uuid = require('uuid')
 const { hasSubscribers } = require('diagnostics_channel');
 const path = require('path');
 const { exec } = require('child_process');
-// const { uploadMovieUrl, getMovieUrl } = require('../utils/s3Movie');
 
-const chapters = {} // We will create an in-memory DB for now
 
 const createMovie = expressAsyncHandler(async (req, res) => {
     try {
@@ -25,7 +23,8 @@ const createMovie = expressAsyncHandler(async (req, res) => {
     }
 });
 const uploadMovie = expressAsyncHandler(async (req, res) => {
-    const chapterId = uuid.v4(); // Generate a unique chapter ID
+    const { id } = req.params;
+    const chapterId = id; // Generate a unique chapter ID
     const videoPath = req.file.path;
     const outputDir = `public/videos/${chapterId}`;
     const outputFileName = 'output.m3u8';
@@ -47,7 +46,7 @@ const uploadMovie = expressAsyncHandler(async (req, res) => {
         -f hls ${outputPath}`
 
     // Execute ffmpeg command
-    exec(command, (error, stdout, stderr) => {
+    exec(command, async (error, stdout, stderr) => {
         if (error) {
             console.error(`ffmpeg exec error: ${error}`);
             return res.status(500).json({ error: 'Failed to convert video to HLS format' });
@@ -55,8 +54,8 @@ const uploadMovie = expressAsyncHandler(async (req, res) => {
         console.log(`stdout: ${stdout}`);
         console.error(`stderr: ${stderr}`);
         const videoUrl = `public/videos/${chapterId}/${outputFileName}`;
-        chapters[chapterId] = { videoUrl, title: req.body.title, description: req.body.description }; // Store chapter information
-        res.json({ success: true, message: 'Video uploaded and converted to HLS.', chapterId });
+        const movie = await Movie.findByIdAndUpdate(id, { movieStreamUrl: videoUrl });
+        res.json({ success: true, message: 'Video uploaded and converted to HLS.', chapterId, movie });
     });
 });
 
