@@ -30,7 +30,7 @@ const createMovie = expressAsyncHandler(async (req, res) => {
         throw new Error(err);
     }
 });
-const chapters = [];
+
 const uploadMovie = expressAsyncHandler(async (req, res) => {
     const { id } = req.params;
     const chapterId = id; // Generate a unique chapter ID
@@ -77,10 +77,9 @@ const uploadMovie = expressAsyncHandler(async (req, res) => {
                 };
                 await s3.upload(params).promise();
             }
-            const videoUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${chapterId}/${outputFileName}`;
-            // chapters[chapterId] = { videoUrl, title: req.body.title, description: req.body.description }; // Store chapter information
+            const videoUrl = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.S3_REGION}.amazonaws.com/${chapterId}/${outputFileName}`;
             const movie = await Movie.findByIdAndUpdate(id, { movieStreamUrl: videoUrl });
-            res.json({ success: true, message: 'Video uploaded and converted to HLS.', chapters });
+            res.json({ success: true, message: 'Video uploaded and converted to HLS.', movie });
         } catch (uploadError) {
             console.error(`S3 upload error: ${uploadError}`);
             res.status(500).json({ error: 'Failed to upload video to S3' });
